@@ -1,17 +1,68 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/iA_HXS2O)
-# Task
+# Text Classification Project
 
-The task is described at [https://uazhlt-ms-program.github.io/ling-539-competition-2026/assignments/class-competition/](https://uazhlt-ms-program.github.io/ling-539-competition-2026/assignments/class-competition/)
+This repository contains the source code, data, environment setup, and project workflow for the classification project.
 
-The competition is hosted at [https://www.kaggle.com/competitions/ling-539-competition-2026](https://www.kaggle.com/competitions/ling-539-competition-2026)
+The project is a three-label text classification task. Each document is classified as one of the following labels:
 
-**To join the competition, you must accept it at the following URL**: [https://www.kaggle.com/t/03c8dd2e91474ec1b64203601079805b](https://www.kaggle.com/t/03c8dd2e91474ec1b64203601079805b)
+| Label | Meaning |
+|---:|---|
+| `0` | Not a movie or TV show review |
+| `1` | Positive movie or TV show review |
+| `2` | Negative movie or TV show review |
 
-# Notes
-- This project involves a **performance evaluation** as well as your **graded assessment**. It's important to keep these two things separate in your mind.
-  - The rubric which will be used to assess your submission *for a grade* (ie, not to evaluate the performance of your model) is in the D2L assignment item
-  - You are permitted to propose more than one classification model or approach. However, as described on the assessment rubric, **at least one of your submitted models must use one or more of the classification algorithms covered in this course.** (For more details related to assessment, be sure you understand the details of that rubric)
-  - The performance of your model will be evaluated by Kaggle, and your model's performance will be ranked against other class submissions. The performance of your model is **one**, but not the only, factor by which your model will be assessed for a grade
-- You are encouraged, but not obligated, to use Python
-- You may delete or alter any files in this repository
-- You are free to add dependencies, **however**, ensure that your code can be installed/used on another machine running Linux or MacOS (consider containerizing your project with Docker or an equivalent technology)
+The project is evaluated using macro F1, so the goal is to build a classifier that performs reasonably well across all three labels instead of only optimizing overall accuracy.
+
+## Project goals
+
+The main goals of this project are:
+
+1. Explore the project data.
+2. Build a reproducible text-classification workflow.
+3. Train and evaluate baseline models.
+4. Generate project submission files.
+5. Document the workflow clearly enough that the results can be reproduced from this repository.
+
+The repository is organized so that the full workflow can be run through Docker.
+
+## Current project status
+
+The project is currently in the setup and reproducibility stage.
+
+Completed so far:
+
+- The repository has been cloned and opened in VS Code.
+- The project data has been added under `data/`.
+- The Python dependency list has been updated for Python 3.13.
+- The project is being moved into a Docker-based workflow.
+- Initial project scripts are being organized under `scripts/`.
+
+Next steps:
+
+- Finish the Docker reproducibility setup.
+- Run the first exploratory data analysis script.
+- Build a baseline text-classification model.
+- Generate the first submission file.
+- Add validation results and error analysis.
+
+## Repository structure
+
+```text
+.
+├── data/
+│   ├── train.csv
+│   ├── test.csv
+│   └── sample_submission.csv
+├── models/
+│   └── .gitkeep
+├── reports/
+│   └── .gitkeep
+├── scripts/
+│   ├── check_environment.py
+│   └── explore_data.py
+├── submissions/
+│   └── .gitkeep
+├── Dockerfile
+├── README.md
+├── requirements.txt
+├── .dockerignore
+└── .gitignore
