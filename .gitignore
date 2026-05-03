@@ -77,7 +77,6 @@ instance/
 
 # Sphinx documentation
 docs/_build/
->>>>>>> 5695aa3a9fc3d2d7e7eda1bf251d1ba145ac651d
 
 # PyBuilder
 target/
@@ -122,3 +121,4 @@ ENV/
 
 #vscode settings
 .vscode/
+.vscode/*
