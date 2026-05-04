@@ -1,24 +1,31 @@
-FROM pytorch/pytorch:1.9.1-cuda11.1-cudnn8-runtime
+FROM python:3.13-slim
 
-LABEL author="Gus Hahn-Powell"
-LABEL description="Default container definition for class competition."
+LABEL author="Trevor Norton"
+LABEL description="Reproducible Python 3.13 container for the Kaggle competition project."
 
-# Create app directory
+# Keep Python behavior predictable inside Docker.
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PYTHONPATH=/app
+
+# Project root inside the container.
 WORKDIR /app
 
-RUN pip install -U pytorch-lightning \
-    graphviz==0.16 \
-    "ipython>=7.20.0,<8" \
-    notebook==6.4.6 \
-    jupyter-client==7.1.2 \
-    jupyter-contrib-nbextensions==0.5.1 \
-    && jupyter contrib nbextension install --user
+# System packages.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    graphviz \
+    && rm -rf /var/lib/apt/lists/*
 
-# copy executables to path
-COPY . ./
-RUN chmod u+x  scripts/* \
-    && mv scripts/* /usr/local/bin/ \
-    && rmdir scripts
+# Install Python dependencies first so Docker can cache this layer.
+COPY requirements.txt .
 
-# launch jupyter by default
-CMD ["/bin/bash", "launch-notebook"]
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && python -m pip install -r requirements.txt
+
+# Copy the project files after dependencies are installed.
+COPY . .
+
+# Default command: verify the environment.
+CMD ["python", "scripts/check_environment.py"]
