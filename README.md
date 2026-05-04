@@ -26,21 +26,25 @@ The repository is organized so that the full workflow can be run through Docker.
 
 ## Current project status
 
-The project is currently in the setup and reproducibility stage.
+The project is currently moving from setup and reproducibility into exploratory data analysis.
 
 Completed so far:
 
 - The repository has been cloned and opened in VS Code.
 - The project data has been added under `data/`.
 - The Python dependency list has been updated for Python 3.13.
-- The project is being moved into a Docker-based workflow.
-- Initial project scripts are being organized under `scripts/`.
+- A Docker-based workflow has been added and tested.
+- The Docker image includes the project data.
+- The Docker environment check passes.
+- Initial project scripts are organized under `scripts/`.
+- Output folders are included for reports, models, and submission files.
 
 Next steps:
 
-- Finish the Docker reproducibility setup.
 - Run the first exploratory data analysis script.
+- Generate an exploratory data analysis report.
 - Build a baseline text-classification model.
+- Evaluate the baseline model with macro F1.
 - Generate the first submission file.
 - Add validation results and error analysis.
 
@@ -66,7 +70,6 @@ Next steps:
 ├── requirements.txt
 ├── .dockerignore
 └── .gitignore
-
 ```
 
 ## Data
@@ -81,6 +84,34 @@ Expected files:
 
 These files are committed to the repository so that the project can be reproduced without a separate data-download step.
 
+### `data/train.csv`
+
+The training dataset.
+
+Expected columns:
+
+- `ID`
+- `TEXT`
+- `LABEL`
+
+### `data/test.csv`
+
+The test dataset used for generating final predictions.
+
+Expected columns:
+
+- `ID`
+- `TEXT`
+
+### `data/sample_submission.csv`
+
+The example submission-format file.
+
+Expected columns:
+
+- `ID`
+- `LABEL`
+
 The raw data files should not be edited manually. Scripts should read from `data/` and write generated outputs to `reports/`, `models/`, or `submissions/`.
 
 ## Environment
@@ -88,6 +119,8 @@ The raw data files should not be edited manually. Scripts should read from `data
 The project uses Docker to create a reproducible Python 3.13 environment.
 
 The Docker image installs the packages listed in `requirements.txt` and runs project scripts from the repository root.
+
+The dependency file currently uses version ranges while the project is in active development. At the end of the project, the dependency versions can be frozen more tightly so the final workflow is easier to reproduce exactly.
 
 ## Build the Docker image
 
@@ -97,9 +130,15 @@ From the repository root, run:
 docker build -t classification-project:py313 .
 ```
 
+For a fully fresh rebuild that does not use cached Docker layers, run:
+
+```bash
+docker build --no-cache --progress=plain -t classification-project:py313-fresh .
+```
+
 ## Check the Docker environment
 
-Run:
+Run the default environment check from the Docker image:
 
 ```bash
 docker run --rm classification-project:py313
@@ -113,21 +152,68 @@ python scripts/check_environment.py
 
 This verifies the Python version, installed packages, and expected project folders.
 
-To run the environment check while mounting the local repository, use:
+To run the same environment check while mounting the local repository, use:
 
 ```bash
 docker run --rm -it --mount "type=bind,source=${PWD},target=/app" -w /app classification-project:py313 python scripts/check_environment.py
+```
+
+## Verify the project data inside Docker
+
+To confirm that the project data files are available inside the Docker image, run:
+
+```bash
+docker run --rm classification-project:py313 python -c "from pathlib import Path; print([(p.name, p.stat().st_size) for p in Path('data').glob('*.csv')])"
+```
+
+Expected output should list these three files:
+
+```text
+train.csv
+test.csv
+sample_submission.csv
+```
+
+## Start an interactive Docker shell
+
+To open a shell inside the container with the local repository mounted, run:
+
+```bash
+docker run --rm -it --mount "type=bind,source=${PWD},target=/app" -w /app classification-project:py313 bash
+```
+
+From inside the container, project scripts can be run with commands like:
+
+```bash
+python scripts/check_environment.py
+python scripts/explore_data.py
 ```
 
 ## Current scripts
 
 ### `scripts/check_environment.py`
 
-Checks that the Docker environment is usable. It prints the Python version, platform, package versions, and expected project paths.
+Checks that the Docker environment is usable.
+
+This script prints:
+
+- Python executable
+- Python version
+- Platform information
+- Installed package versions
+- Expected project paths
+
+The script should end with:
+
+```text
+Environment check passed.
+```
 
 ### `scripts/explore_data.py`
 
-Exploratory data-analysis script. This script is used to inspect the training and test data, summarize label counts, check missing values, examine text lengths, and generate useful outputs for the final project write-up.
+Exploratory data-analysis script.
+
+This script is used to inspect the training and test data, summarize label counts, check missing values, examine text lengths, and generate useful outputs for the final project write-up.
 
 ## Planned modeling workflow
 
@@ -149,11 +235,13 @@ scripts/evaluate_model.py
 scripts/make_submission.py
 ```
 
+These scripts will be added as the project develops.
+
 ## Output folders
 
 ### `reports/`
 
-Stores generated EDA summaries, validation results, plots, and error-analysis notes.
+Stores generated exploratory data analysis summaries, validation results, plots, and error-analysis notes.
 
 ### `models/`
 
@@ -166,6 +254,15 @@ Stores generated submission CSV files.
 ## Reproducibility notes
 
 The project is designed so that a reader can clone the repository, build the Docker image, run the scripts, and reproduce the project workflow.
+
+Current reproducibility features:
+
+- Project data is committed under `data/`.
+- Python dependencies are listed in `requirements.txt`.
+- The runtime environment is defined in `Dockerfile`.
+- Local development clutter is excluded through `.dockerignore` and `.gitignore`.
+- The environment can be checked with `scripts/check_environment.py`.
+- Output folders are included in the repository using `.gitkeep` files.
 
 As the project develops, this README will be updated with:
 
