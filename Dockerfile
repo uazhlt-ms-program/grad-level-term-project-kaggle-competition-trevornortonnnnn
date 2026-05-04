@@ -1,7 +1,7 @@
 FROM python:3.13-slim
 
 LABEL author="Trevor Norton"
-LABEL description="Reproducible Python 3.13 container for the Kaggle competition project."
+LABEL description="Reproducible Python 3.13 container for the classification project."
 
 # Keep Python behavior predictable inside Docker.
 ENV PYTHONDONTWRITEBYTECODE=1
