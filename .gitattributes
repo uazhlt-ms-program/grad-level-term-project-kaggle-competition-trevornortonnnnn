@@ -1,0 +1,47 @@
+# Default: keep text files LF-normalized for Docker/Linux consistency.
+* text=auto eol=lf
+
+# Project source and documentation.
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.sh text eol=lf
+
+# Extensionless and dotfiles used by this project.
+Dockerfile text eol=lf
+.gitignore text eol=lf
+.dockerignore text eol=lf
+.gitattributes text eol=lf
+
+# Generated text outputs.
+reports/*.md text eol=lf
+reports/*.csv text eol=lf
+submissions/*.csv text eol=lf
+
+# Keep raw project data untouched to avoid unnecessary large data diffs.
+data/*.csv -text
+
+# Binary files: never normalize line endings.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.pkl binary
+*.pickle binary
+*.joblib binary
+*.npy binary
+*.npz binary
+*.parquet binary
+*.feather binary
+*.sqlite binary
+*.db binary

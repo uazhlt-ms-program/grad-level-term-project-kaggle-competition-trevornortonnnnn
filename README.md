@@ -1,54 +1,16 @@
-# Text Classification Project
+# Movie and TV Review Text Classification
 
-This repository contains the source code, data, environment setup, and project workflow for the classification project.
-
-The project is a three-label text classification task. Each document is classified as one of the following labels:
+This repository contains a complete text classification workflow for assigning each input document to one of three labels:
 
 | Label | Meaning |
-|---:|---|
+| ---: | --- |
 | `0` | Not a movie or TV show review |
 | `1` | Positive movie or TV show review |
 | `2` | Negative movie or TV show review |
 
-The project is evaluated using macro F1, so the goal is to build a classifier that performs reasonably well across all three labels instead of only optimizing overall accuracy.
+The classifier handles two related decisions: first, whether a text is a movie/TV review at all, and second, whether a review is positive or negative.
 
-## Project goals
-
-The main goals of this project are:
-
-1. Explore the project data.
-2. Build a reproducible text-classification workflow.
-3. Train and evaluate baseline models.
-4. Generate project submission files.
-5. Document the workflow clearly enough that the results can be reproduced from this repository.
-
-The repository is organized so that the full workflow can be run through Docker.
-
-## Current project status
-
-The project is currently moving from setup and reproducibility into exploratory data analysis.
-
-Completed so far:
-
-- The repository has been cloned and opened in VS Code.
-- The project data has been added under `data/`.
-- The Python dependency list has been updated for Python 3.13.
-- A Docker-based workflow has been added and tested.
-- The Docker image includes the project data.
-- The Docker environment check passes.
-- Initial project scripts are organized under `scripts/`.
-- Output folders are included for reports, models, and submission files.
-
-Next steps:
-
-- Run the first exploratory data analysis script.
-- Generate an exploratory data analysis report.
-- Build a baseline text-classification model.
-- Evaluate the baseline model with macro F1.
-- Generate the first submission file.
-- Add validation results and error analysis.
-
-## Repository structure
+## Repository Structure
 
 ```text
 .
@@ -57,218 +19,184 @@ Next steps:
 │   ├── test.csv
 │   └── sample_submission.csv
 ├── models/
-│   └── .gitkeep
+│   ├── .gitkeep
+│   └── tfidf_hierarchical_sgd_hinge_refined_v2.joblib
 ├── reports/
-│   └── .gitkeep
+│   ├── .gitkeep
+│   ├── model_results.md
+│   └── stat_report.md
 ├── scripts/
-│   ├── check_environment.py
-│   └── explore_data.py
+│   ├── explore_data.py
+│   └── train.py
 ├── submissions/
-│   └── .gitkeep
+│   ├── .gitkeep
+│   └── submission_tfidf_hierarchical_sgd_hinge_refined_v2.csv
+├── .dockerignore
+├── .gitattributes
+├── .gitignore
 ├── Dockerfile
 ├── README.md
-├── requirements.txt
-├── .dockerignore
-└── .gitignore
+└── requirements.txt
 ```
 
-## Data
+## Data Requirements and Schema
 
-The data files for the project are in the `data/` directory.
+The workflow expects the project data in `data/`.
 
-Expected files:
+| File | Required columns | Purpose |
+| --- | --- | --- |
+| `data/train.csv` | `ID`, `TEXT`, `LABEL` | Labeled training data |
+| `data/test.csv` | `ID`, `TEXT` | Unlabeled test data for prediction |
+| `data/sample_submission.csv` | `ID`, `LABEL` | Submission template and expected ID order |
 
-- `data/train.csv`
-- `data/test.csv`
-- `data/sample_submission.csv`
+The scripts validate the expected columns and ID structure before running. Raw CSV files in `data/` are treated as read-only inputs.
 
-These files are committed to the repository so that the project can be reproduced without a separate data-download step.
+## Modeling Approach
 
-### `data/train.csv`
+The final model is implemented in `scripts/train.py` as a custom scikit-learn estimator named `HierarchicalSGDClassifier`.
 
-The training dataset.
+The model uses a two-stage hierarchy:
 
-Expected columns:
+1. **Stage 1: review detection**
+   - Binary task: label `0` versus labels `1` and `2`
+   - Texts predicted as non-reviews are assigned label `0`
 
-- `ID`
-- `TEXT`
-- `LABEL`
+2. **Stage 2: review sentiment**
+   - Binary task: label `1` versus label `2`
+   - Only texts predicted as reviews by Stage 1 are passed to this classifier
 
-### `data/test.csv`
+Both stages use linear `SGDClassifier` models with hinge loss, L2 regularization, averaged weights, and TF-IDF-based feature pipelines. The final trained model is saved as:
 
-The test dataset used for generating final predictions.
+```text
+models/tfidf_hierarchical_sgd_hinge_refined_v2.joblib
+```
 
-Expected columns:
+## Feature Extraction and Text Normalization
 
-- `ID`
-- `TEXT`
+Each classifier stage uses a `FeatureUnion` that combines three feature branches:
 
-### `data/sample_submission.csv`
+| Feature branch | Description |
+| --- | --- |
+| Word TF-IDF | Word-level n-gram features extracted from normalized text |
+| Character TF-IDF | Character-level `char_wb` n-gram features for subword and spelling patterns |
+| Surface features | Numeric features based on text length, punctuation, casing, digits, and repeated punctuation |
 
-The example submission-format file.
+The text cleaning pipeline performs the following normalization steps:
 
-Expected columns:
+- Converts missing text values to empty strings
+- Unescapes HTML entities
+- Replaces `<br>` tags and strips other HTML tags
+- Applies Unicode normalization
+- Normalizes quotes, apostrophes, dashes, ellipses, and non-breaking spaces
+- Removes invisible and control characters
+- Replaces email addresses with `__email__`
+- Replaces URLs with `__url__`
+- Expands common contractions
+- Normalizes ratings such as `8/10`, `8 out of 10`, `4 stars`, and selected letter grades into rating tokens
+- Converts repeated or mixed punctuation into normalized punctuation tokens
+- Shortens elongated character sequences
+- Collapses repeated whitespace
 
-- `ID`
-- `LABEL`
+The surface feature branch extracts:
 
-The raw data files should not be edited manually. Scripts should read from `data/` and write generated outputs to `reports/`, `models/`, or `submissions/`.
+- Log character count
+- Log word count
+- Sentence punctuation count
+- Exclamation mark count
+- Question mark count
+- Uppercase letter ratio
+- Digit ratio
+- Punctuation ratio
+- Repeated punctuation flag
 
-## Environment
+Surface features are scaled with `MaxAbsScaler`.
 
-The project uses Docker to create a reproducible Python 3.13 environment.
+Stage 2 also applies negation-scope marking so that words following negation triggers such as `not`, `never`, or `without` receive a `_NEG` suffix within a short window.
 
-The Docker image installs the packages listed in `requirements.txt` and runs project scripts from the repository root.
+## Data Cleaning in the Training Workflow
 
-The dependency file currently uses version ranges while the project is in active development. At the end of the project, the dependency versions can be frozen more tightly so the final workflow is easier to reproduce exactly.
+The training script creates normalized duplicate keys, removes exact train/test text overlap from the training view, collapses duplicate training text, deduplicates test text for inference, and expands predictions back to the original test ID order.
 
-## Build the Docker image
+| Cleaning statistic | Count |
+| --- | ---: |
+| Original training rows | `70,317` |
+| Original test rows | `17,580` |
+| Training duplicate groups | `362` |
+| Extra training duplicate rows | `1,151` |
+| Test duplicate groups | `71` |
+| Extra test duplicate rows | `181` |
+| Train/test overlap groups | `209` |
+| Training overlap rows removed | `1,003` |
+| Training duplicate rows removed after overlap removal | `357` |
+| Clean training rows used for modeling | `68,957` |
+| Unique test rows used for inference | `17,399` |
+| Test duplicate rows collapsed for inference | `181` |
+| Conflicting duplicate-label groups | `0` |
 
-From the repository root, run:
+## Reproducing the Workflow
+
+Docker is the recommended way to run the project.
+
+### 1. Build the Docker image
+
+From the repository root:
 
 ```bash
 docker build -t classification-project:py313 .
 ```
 
-For a fully fresh rebuild that does not use cached Docker layers, run:
+### 2. Enter the container
 
 ```bash
-docker build --no-cache --progress=plain -t classification-project:py313-fresh .
+docker run --rm -it \
+  --mount "type=bind,source=${PWD},target=/app" \
+  -w /app \
+  classification-project:py313 \
+  bash
 ```
 
-## Check the Docker environment
+### 3. Run the training workflow inside the container
 
-Run the default environment check from the Docker image:
+Once inside the container, run:
 
 ```bash
-docker run --rm classification-project:py313
+python scripts/train.py
 ```
 
-The default Docker command runs:
-
-```bash
-python scripts/check_environment.py
-```
-
-This verifies the Python version, installed packages, and expected project folders.
-
-To run the same environment check while mounting the local repository, use:
-
-```bash
-docker run --rm -it --mount "type=bind,source=${PWD},target=/app" -w /app classification-project:py313 python scripts/check_environment.py
-```
-
-## Verify the project data inside Docker
-
-To confirm that the project data files are available inside the Docker image, run:
-
-```bash
-docker run --rm classification-project:py313 python -c "from pathlib import Path; print([(p.name, p.stat().st_size) for p in Path('data').glob('*.csv')])"
-```
-
-Expected output should list these three files:
+This writes or updates:
 
 ```text
-train.csv
-test.csv
-sample_submission.csv
+reports/model_results.md
+models/tfidf_hierarchical_sgd_hinge_refined_v2.joblib
+submissions/submission_tfidf_hierarchical_sgd_hinge_refined_v2.csv
 ```
 
-## Start an interactive Docker shell
-
-To open a shell inside the container with the local repository mounted, run:
+Exit the container when finished:
 
 ```bash
-docker run --rm -it --mount "type=bind,source=${PWD},target=/app" -w /app classification-project:py313 bash
+exit
 ```
 
-From inside the container, project scripts can be run with commands like:
+## Direct Docker Commands
+
+The same workflow can also be run without manually entering the container.
+
+Run data exploration:
 
 ```bash
-python scripts/check_environment.py
-python scripts/explore_data.py
+docker run --rm \
+  --mount "type=bind,source=${PWD},target=/app" \
+  -w /app \
+  classification-project:py313 \
+  python scripts/explore_data.py
 ```
 
-## Current scripts
+Run training and submission generation:
 
-### `scripts/check_environment.py`
-
-Checks that the Docker environment is usable.
-
-This script prints:
-
-- Python executable
-- Python version
-- Platform information
-- Installed package versions
-- Expected project paths
-
-The script should end with:
-
-```text
-Environment check passed.
+```bash
+docker run --rm \
+  --mount "type=bind,source=${PWD},target=/app" \
+  -w /app \
+  classification-project:py313 \
+  python scripts/train.py
 ```
-
-### `scripts/explore_data.py`
-
-Exploratory data-analysis script.
-
-This script is used to inspect the training and test data, summarize label counts, check missing values, examine text lengths, and generate useful outputs for the final project write-up.
-
-## Planned modeling workflow
-
-The planned workflow is:
-
-1. Load `train.csv` and `test.csv`.
-2. Split the training data into training and validation sets.
-3. Train baseline text classifiers using TF-IDF features.
-4. Evaluate models using macro F1.
-5. Analyze validation errors.
-6. Train the final selected model.
-7. Generate a submission CSV in `submissions/`.
-
-Planned scripts include:
-
-```text
-scripts/train_baseline.py
-scripts/evaluate_model.py
-scripts/make_submission.py
-```
-
-These scripts will be added as the project develops.
-
-## Output folders
-
-### `reports/`
-
-Stores generated exploratory data analysis summaries, validation results, plots, and error-analysis notes.
-
-### `models/`
-
-Stores trained model artifacts.
-
-### `submissions/`
-
-Stores generated submission CSV files.
-
-## Reproducibility notes
-
-The project is designed so that a reader can clone the repository, build the Docker image, run the scripts, and reproduce the project workflow.
-
-Current reproducibility features:
-
-- Project data is committed under `data/`.
-- Python dependencies are listed in `requirements.txt`.
-- The runtime environment is defined in `Dockerfile`.
-- Local development clutter is excluded through `.dockerignore` and `.gitignore`.
-- The environment can be checked with `scripts/check_environment.py`.
-- Output folders are included in the repository using `.gitkeep` files.
-
-As the project develops, this README will be updated with:
-
-- EDA commands
-- training commands
-- validation results
-- submission-generation commands
-- final model information
-- final project results
